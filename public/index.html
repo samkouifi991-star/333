@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kalshi Edge Bot</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #0a0a0f;
+      color: #e0e0e8;
+      min-height: 100vh;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #1e1e2e;
+      margin-bottom: 24px;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #22d3ee, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: #14532d;
+      color: #4ade80;
+      font-weight: 600;
+    }
+
+    .status-badge.offline { background: #451a03; color: #fb923c; }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: pulse 1.5s infinite;
+    }
+
+    .status-badge.offline .dot { background: #fb923c; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Stats cards */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: #12121c;
+      border: 1px solid #1e1e2e;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .stat-card .label {
+      font-size: 0.75rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .stat-card .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #f0f0f8;
+    }
+
+    /* Table */
+    .table-wrap {
+      background: #12121c;
+      border: 1px solid #1e1e2e;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .table-header {
+      padding: 14px 16px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border-bottom: 1px solid #1e1e2e;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .table-header .refresh-note {
+      font-size: 0.7rem;
+      color: #555;
+      font-weight: 400;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    th {
+      text-align: left;
+      padding: 10px 16px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: #666;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid #1a1a2a;
+    }
+
+    td {
+      padding: 10px 16px;
+      font-size: 0.85rem;
+      border-bottom: 1px solid #111118;
+    }
+
+    tr:hover td { background: #16162a; }
+
+    .strength-strong { color: #4ade80; font-weight: 600; }
+    .strength-medium { color: #facc15; font-weight: 600; }
+    .strength-weak   { color: #888; }
+
+    .edge-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #1e293b;
+      color: #38bdf8;
+    }
+
+    .empty-state {
+      padding: 40px;
+      text-align: center;
+      color: #555;
+      font-size: 0.9rem;
+    }
+
+    .error-banner {
+      background: #451a03;
+      border: 1px solid #78350f;
+      color: #fbbf24;
+      padding: 10px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 600px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      td, th { padding: 8px 10px; font-size: 0.78rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>⚡ Kalshi Edge Bot</h1>
+      <span id="statusBadge" class="status-badge offline">
+        <span class="dot"></span> Connecting…
+      </span>
+    </header>
+
+    <div id="errorBanner" class="error-banner" style="display:none;"></div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="label">Status</div>
+        <div class="value" id="statRunning">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total Markets</div>
+        <div class="value" id="statMarkets">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Opportunities</div>
+        <div class="value" id="statOpps">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Uptime</div>
+        <div class="value" id="statUptime">0s</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-header">
+        <span>Opportunities</span>
+        <span class="refresh-note">Auto-refreshes every 8s</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Price</th>
+            <th>Volume</th>
+            <th>Edge</th>
+            <th>Strength</th>
+          </tr>
+        </thead>
+        <tbody id="oppsBody">
+          <tr><td colspan="5" class="empty-state">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    function formatUptime(seconds) {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = Math.floor(seconds % 60);
+      if (h > 0) return `${h}h ${m}m`;
+      if (m > 0) return `${m}m ${s}s`;
+      return `${s}s`;
+    }
+
+    async function refresh() {
+      try {
+        const [statusRes, oppsRes] = await Promise.all([
+          fetch("/status"),
+          fetch("/opportunities"),
+        ]);
+        const status = await statusRes.json();
+        const opps = await oppsRes.json();
+
+        // Status
+        const badge = $("statusBadge");
+        if (status.running) {
+          badge.className = "status-badge";
+          badge.innerHTML = '<span class="dot"></span> Running';
+        } else {
+          badge.className = "status-badge offline";
+          badge.innerHTML = '<span class="dot"></span> No API Key';
+        }
+
+        $("statRunning").textContent = status.running ? "Active" : "Demo";
+        $("statMarkets").textContent = status.totalMarkets.toLocaleString();
+        $("statOpps").textContent = status.opportunitiesFound;
+        $("statUptime").textContent = formatUptime(status.uptime);
+
+        // Error
+        if (status.error) {
+          $("errorBanner").style.display = "block";
+          $("errorBanner").textContent = "⚠ " + status.error;
+        } else {
+          $("errorBanner").style.display = "none";
+        }
+
+        // Table
+        const tbody = $("oppsBody");
+        if (opps.opportunities.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="5" class="empty-state">No opportunities found yet — scanning…</td></tr>';
+        } else {
+          tbody.innerHTML = opps.opportunities
+            .map(
+              (o) => `
+            <tr>
+              <td><strong>${o.ticker}</strong></td>
+              <td>${o.price}¢</td>
+              <td>${o.volume.toLocaleString()}</td>
+              <td><span class="edge-tag">${o.edge}</span></td>
+              <td class="strength-${o.strength}">${o.strength.toUpperCase()}</td>
+            </tr>`
+            )
+            .join("");
+        }
+      } catch (err) {
+        console.error("Refresh failed:", err);
+      }
+    }
+
+    refresh();
+    setInterval(refresh, 8000);
+  </script>
+</body>
+</html>
